@@ -242,9 +242,13 @@ class Chef
       end
 
       def link_current_release_to_production
-        FileUtils.rm_f(@new_resource.current_path)
         begin
-          FileUtils.ln_sf(release_path, @new_resource.current_path)
+          tmp_release_path = File.join(Dir.tmpdir, [File.basename(@new_resource.current_path) + Process.pid].join('-'))
+          # Prepare the symlink so as to not impact the current deploy if it fails
+          FileUtils.ln_sf(tmp_release_path, @new_resource.current_path)
+          # Swap the current release with the new release atomically
+          # TODO: check the behavior
+          FileUtils.mv_f(release_path, tmp_release_path)
         rescue => e
           raise Chef::Exceptions::FileNotFound.new("Cannot symlink current release to production: #{e.message}")
         end
